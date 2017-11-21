@@ -1,12 +1,15 @@
 # -*- coding:utf-8 -*-
-# 修改自 http://blog.csdn.net/qq_26645205/article/details/78285131
-# 整理：A.Star chenxiaolong12315@163.com
+# 整理: A.Star chenxiaolong12315@163.com
 # 使用时请保留此信息
+
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial import distance as dist
 import time
+import itertools
+
 npm = np.mat
-npr = np.random
+npa = np.array
 class Kohonen(object):
     def __init__(self):
         self.lratemax=0.8   #最大学习率-欧式距离
@@ -22,15 +25,15 @@ class Kohonen(object):
         self.dataMat=[]     #外部导入数据集
         self.classLabel=[]  #聚类后的类别标签
 
-    def loadDate(self,fileName, split_ch='\t'):  #加载数据文件
+    def loadDate(self,fileName,split_char='\t'):  #加载数据文件
         fr=open(fileName)
         for line in fr.readlines():
-            curLine=line.strip().split(split_ch)
+            curLine=line.strip().split(split_char)
             lineArr=[]
             lineArr.append(float(curLine[0]))
             lineArr.append(float(curLine[1]))
             self.dataMat.append(lineArr)
-        self.dataMat=npm(self.dataMat)
+        self.dataMat=np.mat(self.dataMat)
 
     def file2matrix(self,path, delimiter):
         recordlist = []
@@ -41,7 +44,7 @@ class Kohonen(object):
         # 逐行遍历      # 结果按分隔符分割为行向量
         recordlist = [map(eval, row.split(delimiter)) for row in rowlist if row.strip()]
         # 返回转换后的矩阵形式
-        self.dataMat = npm(recordlist)
+        self.dataMat = np.mat(recordlist)
 
     def normalize(self,dataMat):
         [m,n]=np.shape(dataMat)
@@ -50,28 +53,20 @@ class Kohonen(object):
         return dataMat
 
     def distEclud(self,matA,matB):
-        ma, na = np.shape(matA);
-        mb, nb = np.shape(matB);
-        rtnmat = np.zeros((ma, nb))
-        for i in range(ma):
-            for j in range(nb):
-                rtnmat[i, j] = np.linalg.norm(matA[i, :] - matB[:, j].T)
-        return rtnmat
+        return dist.cdist(matA, matB.T)
 
     def init_grid(self): #初始化第二层网格
         [m, n] = np.shape(self.dataMat)
-        k=0 #构建低二层网络模型
+        #构建低二层网络模型
         #数据集的维度即网格的维度，分类的个数即网格的行数
-        grid=np.zeros((self.M*self.N,n))
-        for i in range(self.M):
-            for j in range(self.N):
-                grid[k,:]=[i,j]
-                k+=1
-        return grid
+
+        itor = itertools.product(range(self.M),range(self.N))
+        grid = [list(x) for x in itor]
+        return npm(grid)
     def ratecalc(self,i):
         lrate = self.lratemax - (i + 1.0) * (self.lratemax - self.lratemin) / self.Steps
         r = self.rmax - ((i + 1.0) * (self.rmax - self.rmin)) / self.Steps
-        return lrate,r
+        return lrate, r
 
     #主程序
     def train(self):
@@ -82,7 +77,7 @@ class Kohonen(object):
         #2.初始化第二层分类网络
         grid=self.init_grid()
         #3.随机初始化两层之间的权重向量
-        self.w=npr.rand(dn,self.M*self.N)
+        self.w=np.random.rand(dn,self.M*self.N)
         distM=self.distEclud  #确定距离公式
         #4.迭代求解
         if self.Steps<5*dm:self.Steps=5*dm  #设定最小迭代次数
@@ -90,14 +85,14 @@ class Kohonen(object):
             lrate,r=self.ratecalc(i) #1.计算当前迭代次数下的学习率和学习聚类半径
             self.lratelist.append(lrate);self.rlist.append(r)
             #2.随机生成样本索引，并抽取一个样本
-            k=npr.randint(0,dm)
+            k=np.random.randint(0,dm)
             mySample=normDataSet[k,:]
             #3.计算最优节点：返回最小距离的索引值
             minIndx=(distM(mySample,self.w)).argmin()
             #4.计算领域
             d1=np.ceil(minIndx/self.M)  #计算此节点在第二层矩阵中的位置
             d2=np.mod(minIndx,self.M)
-            distMat=distM(npm([d1,d2]),grid.T)
+            distMat=distM(np.mat([d1,d2]),grid.T)
             nodelindx=(distMat<r).nonzero()[1] #获取领域内的所有点
             for j in range(np.shape(self.w)[1]):
                 if sum(nodelindx==j):
@@ -107,7 +102,7 @@ class Kohonen(object):
         self.classLabel=np.zeros(dm) #分配和存储聚类后的类别标签
         for i in range(dm):
             self.classLabel[i]=distM(normDataSet[i,:],self.w).argmin()
-        self.classLabel=npm(self.classLabel)
+        self.classLabel=np.mat(self.classLabel)
 
     def showCluster(self,plt): #绘图
         lst=np.unique(self.classLabel.tolist()[0]) #去重
@@ -115,25 +110,28 @@ class Kohonen(object):
         for cindx in lst:
             myclass = np.nonzero(self.classLabel==cindx)[1]
             xx=self.dataMat[myclass].copy()
-            if i==0: plt.plot(xx[:,0],xx[:,1],'bo')
-            elif i==1:plt.plot(xx[:,0],xx[:,1],'rd')
-            elif i==2:plt.plot(xx[:,0],xx[:,1],'gD')
-            elif i==3:plt.plot(xx[:,0],xx[:,1],'c^')
+
+            if i == 0:
+                plt.plot(xx[:,0],xx[:,1],'bo')
+            elif i == 1:
+                plt.plot(xx[:,0],xx[:,1],'rd')
+            elif i == 2:
+                plt.plot(xx[:,0],xx[:,1],'gD')
+            elif i == 3:
+                plt.plot(xx[:,0],xx[:,1],'c^')
             i+=1
         plt.show()
 
 if __name__=="__main__":
 
-    max_itor = 1
+    max_itor = 100
     t_list = np.zeros(max_itor)
     for i in range(max_itor):
         SOMNet = Kohonen()
-        SOMNet.loadDate('../data/data.txt', split_ch=' ')
+        SOMNet.loadDate('../data/data.txt', split_char=' ')
         s = time.clock()
         SOMNet.train()
         e = time.clock()
-        t_list[i] = e - s
-    print("{}次运行耗时：{}".format(max_itor, t_list))
+    print("{}次运行耗时：{}".format(max_itor,t_list))
     print("平均耗时:{}".format(np.mean(t_list)))
-
     SOMNet.showCluster(plt)
