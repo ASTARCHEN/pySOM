@@ -1,6 +1,4 @@
-# -*- coding:utf-8 -*-
-# 整理: A.Star chenxiaolong12315@163.com
-# 使用时请保留此信息
+# -*- coding=utf-8 -*-
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,7 +8,8 @@ import itertools
 
 npm = np.mat
 npa = np.array
-class Kohonen(object):
+
+class Kohonen():
     def __init__(self):
         self.lratemax=0.8   #最大学习率-欧式距离
         self.lratemin=0.05  #最小学习率-欧式距离
