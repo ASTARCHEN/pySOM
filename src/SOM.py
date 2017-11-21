@@ -1,137 +1,139 @@
 # -*- coding:utf-8 -*-
-# 文件来源：chenge_j http://blog.csdn.net/chenge_j/article/details/72537568
+# 修改自 http://blog.csdn.net/qq_26645205/article/details/78285131
 # 整理：A.Star chenxiaolong12315@163.com
 # 使用时请保留此信息
-
 import numpy as np
-import cmath as math
-import pylab as plt
+import matplotlib.pyplot as plt
 import time
+npm = np.mat
+npr = np.random
+class Kohonen(object):
+    def __init__(self):
+        self.lratemax=0.8   #最大学习率-欧式距离
+        self.lratemin=0.05  #最小学习率-欧式距离
+        self.rmax=5         #最大聚类半径--根据数据集
+        self.rmin=0.5       #最小聚类半径--根据数据集
+        self.Steps=1000     #迭代次数
+        self.lratelist=[]
+        self.rlist=[]
+        self.w=[]
+        self.M=2
+        self.N=2
+        self.dataMat=[]     #外部导入数据集
+        self.classLabel=[]  #聚类后的类别标签
 
-#初始化输入层与竞争层神经元的连接权值矩阵
-def initCompetition(n , m , d):
+    def loadDate(self,fileName, split_ch='\t'):  #加载数据文件
+        fr=open(fileName)
+        for line in fr.readlines():
+            curLine=line.strip().split(split_ch)
+            lineArr=[]
+            lineArr.append(float(curLine[0]))
+            lineArr.append(float(curLine[1]))
+            self.dataMat.append(lineArr)
+        self.dataMat=npm(self.dataMat)
 
-    #随机产生0-1之间的数作为权值
-    array = np.random.random(size=n * m *d)
-    com_weight = array.reshape(n,m,d)
-    return com_weight
+    def file2matrix(self,path, delimiter):
+        recordlist = []
+        fp = open(path)
+        content = fp.read()
+        fp.close()
+        rowlist = content.splitlines()  # 按行转换为一维表
+        # 逐行遍历      # 结果按分隔符分割为行向量
+        recordlist = [map(eval, row.split(delimiter)) for row in rowlist if row.strip()]
+        # 返回转换后的矩阵形式
+        self.dataMat = npm(recordlist)
 
-#计算向量的二范数
-def cal2NF(X):
-    res = 0
-    for x in X:
-        res += x*x
-    return res ** 0.5
+    def normalize(self,dataMat):
+        [m,n]=np.shape(dataMat)
+        for i in range(n):
+           dataMat[:,i] =(dataMat[:,i]-np.mean(dataMat[:,]))/np.std(dataMat[:,])
+        return dataMat
 
-#对数据集进行归一化处理
-def normalize(dataSet):
-    old_dataSet = np.copy(dataSet)
-    for data in dataSet:
-        two_NF = cal2NF(data)
-        for i in range(len(data)):
-            data[i] = data[i] / two_NF
-    return dataSet , old_dataSet
-#对权值矩阵进行归一化处理
-def normalize_weight(com_weight):
-    for x in com_weight:
-        for data in x:
-            two_NF = cal2NF(data)
-            for i in range(len(data)):
-                data[i] = data[i] / two_NF
-    return com_weight
+    def distEclud(self,matA,matB):
+        ma, na = np.shape(matA);
+        mb, nb = np.shape(matB);
+        rtnmat = np.zeros((ma, nb))
+        for i in range(ma):
+            for j in range(nb):
+                rtnmat[i, j] = np.linalg.norm(matA[i, :] - matB[:, j].T)
+        return rtnmat
 
-#得到获胜神经元的索引值
-def getWinner(data , com_weight):
-    max_sim = 0
-    n,m,d = np.shape(com_weight)
-    mark_n = 0
-    mark_m = 0
-    for i in range(n):
-        for j in range(m):
-            if sum(data * com_weight[i,j]) > max_sim:
-                max_sim = sum(data * com_weight[i,j])
-                mark_n = i
-                mark_m = j
-    return mark_n , mark_m
+    def init_grid(self): #初始化第二层网格
+        [m, n] = np.shape(self.dataMat)
+        k=0 #构建低二层网络模型
+        #数据集的维度即网格的维度，分类的个数即网格的行数
+        grid=np.zeros((self.M*self.N,n))
+        for i in range(self.M):
+            for j in range(self.N):
+                grid[k,:]=[i,j]
+                k+=1
+        return grid
+    def ratecalc(self,i):
+        lrate = self.lratemax - (i + 1.0) * (self.lratemax - self.lratemin) / self.Steps
+        r = self.rmax - ((i + 1.0) * (self.rmax - self.rmin)) / self.Steps
+        return lrate,r
 
-#得到神经元的N邻域
-def getNeibor(n , m , N_neibor , com_weight):
-    res = []
-    nn,mm , _ = np.shape(com_weight)
-    for i in range(nn):
-        for j in range(mm):
-            N = int(((i-n)**2+(j-m)**2)**0.5)
-            if N<=N_neibor:
-                res.append((i,j,N))
-    return res
+    #主程序
+    def train(self):
+        #1.构建输入层网络
+        dm,dn=np.shape(self.dataMat)
+        #归一化数据
+        normDataSet=self.normalize(self.dataMat)
+        #2.初始化第二层分类网络
+        grid=self.init_grid()
+        #3.随机初始化两层之间的权重向量
+        self.w=npr.rand(dn,self.M*self.N)
+        distM=self.distEclud  #确定距离公式
+        #4.迭代求解
+        if self.Steps<5*dm:self.Steps=5*dm  #设定最小迭代次数
+        for i in range(self.Steps):
+            lrate,r=self.ratecalc(i) #1.计算当前迭代次数下的学习率和学习聚类半径
+            self.lratelist.append(lrate);self.rlist.append(r)
+            #2.随机生成样本索引，并抽取一个样本
+            k=npr.randint(0,dm)
+            mySample=normDataSet[k,:]
+            #3.计算最优节点：返回最小距离的索引值
+            minIndx=(distM(mySample,self.w)).argmin()
+            #4.计算领域
+            d1=np.ceil(minIndx/self.M)  #计算此节点在第二层矩阵中的位置
+            d2=np.mod(minIndx,self.M)
+            distMat=distM(npm([d1,d2]),grid.T)
+            nodelindx=(distMat<r).nonzero()[1] #获取领域内的所有点
+            for j in range(np.shape(self.w)[1]):
+                if sum(nodelindx==j):
+                    self.w[:,j]=self.w[:,j]+lrate*(mySample[0]-self.w[:,j])
+        #主循环结束
 
-#学习率函数
-def eta(t,N):
-    return (0.3/(t+1))* (math.e ** -N)
+        self.classLabel=np.zeros(dm) #分配和存储聚类后的类别标签
+        for i in range(dm):
+            self.classLabel[i]=distM(normDataSet[i,:],self.w).argmin()
+        self.classLabel=npm(self.classLabel)
 
-#SOM算法的实现
-def do_som(dataSet , com_weight, T , N_neibor):
-    '''
-    T:最大迭代次数
-    N_neibor:初始近邻数
-    '''
-    for t in range(T-1):
-        com_weight = normalize_weight(com_weight)
-        for data in dataSet:
-            n , m = getWinner(data, com_weight)
-            neibor = getNeibor(n , m , N_neibor , com_weight)
-            for x in neibor:
-                j_n=x[0];j_m=x[1];N=x[2]
-                #权值调整
-                com_weight[j_n][j_m] = com_weight[j_n][j_m] + eta(t,N)*(data - com_weight[j_n][j_m])
-            N_neibor = N_neibor+1-(t+1)/200
-    res = {}
-    N , M , _ =np.shape(com_weight)
-    for i in range(len(dataSet)):
-        n, m = getWinner(dataSet[i], com_weight)
-        key = n*M + m
-        if key in res.keys():
-            res[key].append(i)
-        else:
-            res[key] = []
-            res[key].append(i)
-    return res
+    def showCluster(self,plt): #绘图
+        lst=np.unique(self.classLabel.tolist()[0]) #去重
+        i=0
+        for cindx in lst:
+            myclass = np.nonzero(self.classLabel==cindx)[1]
+            xx=self.dataMat[myclass].copy()
+            if i==0: plt.plot(xx[:,0],xx[:,1],'bo')
+            elif i==1:plt.plot(xx[:,0],xx[:,1],'rd')
+            elif i==2:plt.plot(xx[:,0],xx[:,1],'gD')
+            elif i==3:plt.plot(xx[:,0],xx[:,1],'c^')
+            i+=1
+        plt.show()
 
-#SOM算法主方法
-def SOM(dataSet,com_n,com_m,T,N_neibor):
-    dataSet, old_dataSet = normalize(dataSet)
-    com_weight = initCompetition(com_n,com_m,np.shape(dataSet)[1])
-    C_res = do_som(dataSet, com_weight, T, N_neibor)
-    return C_res
+if __name__=="__main__":
 
-def draw(C , dataSet):
-    color = ['r', 'y', 'g', 'b', 'c', 'k', 'm', 'd']
-    count = 0
-    for i in C.keys():
-        X = []
-        Y = []
-        datas = C[i]
-        for j in range(len(datas)):
-            X.append(dataSet[datas[j]][0])
-            Y.append(dataSet[datas[j]][1])
-        plt.scatter(X, Y, marker='o', color=color[count % len(color)], label=i)
-        count += 1
-    plt.legend(loc='upper right')
-    plt.show()
-
-def loadDataSet(fileName):
-    arr = np.loadtxt(fileName)
-    return arr.tolist()
-
-if __name__ == '__main__':
-    dataSet = loadDataSet("../data/data.txt")
     max_itor = 1
     t_list = np.zeros(max_itor)
-    for i1 in range(max_itor):
+    for i in range(max_itor):
+        SOMNet = Kohonen()
+        SOMNet.loadDate('../data/data.txt', split_ch=' ')
         s = time.clock()
-        C_res = SOM(dataSet,2,2,4,2)
-        draw(C_res, dataSet)
+        SOMNet.train()
         e = time.clock()
-        t_list[i1] = e-s
-    print("{}次运行耗时：{}".format(max_itor,t_list))
+        t_list[i] = e - s
+    print("{}次运行耗时：{}".format(max_itor, t_list))
     print("平均耗时:{}".format(np.mean(t_list)))
+
+    SOMNet.showCluster(plt)
