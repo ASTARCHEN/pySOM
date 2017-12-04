@@ -11,17 +11,17 @@ import itertools
 npm = np.mat
 npa = np.array
 class Kohonen(object):
-    def __init__(self):
+    def __init__(self, steps=1000, M=2, N=2):
         self.lratemax=0.8   #最大学习率-欧式距离
         self.lratemin=0.05  #最小学习率-欧式距离
         self.rmax=5         #最大聚类半径--根据数据集
         self.rmin=0.5       #最小聚类半径--根据数据集
-        self.Steps=1000     #迭代次数
+        self.Steps=steps     #迭代次数
         self.lratelist=[]
         self.rlist=[]
         self.w=[]
-        self.M=2
-        self.N=2
+        self.M=M
+        self.N=N
         self.dataMat=[]     #外部导入数据集
         self.classLabel=[]  #聚类后的类别标签
 
@@ -122,24 +122,18 @@ class Kohonen(object):
             i+=1
         plt.show()
 
+SOM = Kohonen
 if __name__=="__main__":
 
     max_itor = 100
     t_list = np.zeros(max_itor)
     for i in range(max_itor):
         SOMNet = Kohonen()
-        SOMNet.loadDate('../data/data.txt', split_char=' ')
->>>>>>> Temporary merge branch 2
+        dataSet = SOMNet.loadDate('../../data/data.txt', split_char=' ')
         s = time.clock()
-        C_res = SOM(dataSet,2,2,4,2)
-        draw(C_res, dataSet)
+        C_res = SOMNet.train()
         e = time.clock()
-<<<<<<< Temporary merge branch 1
-        t_list[i1] = e-s
-    print("{}次运行耗时：{}".format(max_itor,t_list))
-    print("平均耗时:{}".format(np.mean(t_list)))
-=======
+        t_list[i] = e-s
     print("{}次运行耗时：{}".format(max_itor,t_list))
     print("平均耗时:{}".format(np.mean(t_list)))
     SOMNet.showCluster(plt)
->>>>>>> Temporary merge branch 2
