@@ -1,4 +1,6 @@
 # -*- coding=utf-8 -*-
+# 整理: A.Star chenxiaolong12315@163.com
+# 使用时请保留此信息
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,8 +10,7 @@ import itertools
 
 npm = np.mat
 npa = np.array
-
-class Kohonen():
+class Kohonen(object):
     def __init__(self):
         self.lratemax=0.8   #最大学习率-欧式距离
         self.lratemin=0.05  #最小学习率-欧式距离
@@ -128,9 +129,17 @@ if __name__=="__main__":
     for i in range(max_itor):
         SOMNet = Kohonen()
         SOMNet.loadDate('../data/data.txt', split_char=' ')
+>>>>>>> Temporary merge branch 2
         s = time.clock()
-        SOMNet.train()
+        C_res = SOM(dataSet,2,2,4,2)
+        draw(C_res, dataSet)
         e = time.clock()
+<<<<<<< Temporary merge branch 1
+        t_list[i1] = e-s
+    print("{}次运行耗时：{}".format(max_itor,t_list))
+    print("平均耗时:{}".format(np.mean(t_list)))
+=======
     print("{}次运行耗时：{}".format(max_itor,t_list))
     print("平均耗时:{}".format(np.mean(t_list)))
     SOMNet.showCluster(plt)
+>>>>>>> Temporary merge branch 2
