@@ -129,7 +129,7 @@ if __name__=="__main__":
     t_list = np.zeros(max_itor)
     for i in range(max_itor):
         SOMNet = Kohonen()
-        dataSet = SOMNet.loadDate('../../data/data.txt', split_char=' ')
+        dataSet = SOMNet.loadDate('../data/data.txt', split_char=' ')
         s = time.clock()
         C_res = SOMNet.train()
         e = time.clock()
