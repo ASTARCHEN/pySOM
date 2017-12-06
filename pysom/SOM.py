@@ -11,7 +11,7 @@ import itertools
 npm = np.mat
 npa = np.array
 class Kohonen(object):
-    def __init__(self, steps=1000, M=2, N=2):
+    def __init__(self, dataMat=None, steps=1000, M=2, N=2):
         self.lratemax=0.8   #最大学习率-欧式距离
         self.lratemin=0.05  #最小学习率-欧式距离
         self.rmax=5         #最大聚类半径--根据数据集
@@ -22,10 +22,19 @@ class Kohonen(object):
         self.w=[]
         self.M=M
         self.N=N
-        self.dataMat=[]     #外部导入数据集
+        if dataMat is None:
+            self.dataMat=[]     #外部导入数据集
+        else:
+            self.dataMat = npm(dataMat)
         self.classLabel=[]  #聚类后的类别标签
 
-    def loadDate(self,fileName,split_char='\t'):  #加载数据文件
+    def loadDate(self,data ,split_char='\t'):  #加载数据文件
+
+        if isinstance(data, str):
+            fileName = data
+        else:
+            self.dataMat = npm(data)
+            return
         fr=open(fileName)
         for line in fr.readlines():
             curLine=line.strip().split(split_char)
@@ -63,6 +72,7 @@ class Kohonen(object):
         itor = itertools.product(range(self.M),range(self.N))
         grid = [list(x) for x in itor]
         return npm(grid)
+
     def ratecalc(self,i):
         lrate = self.lratemax - (i + 1.0) * (self.lratemax - self.lratemin) / self.Steps
         r = self.rmax - ((i + 1.0) * (self.rmax - self.rmin)) / self.Steps
