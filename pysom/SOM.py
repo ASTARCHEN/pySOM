@@ -28,7 +28,7 @@ class Kohonen(object):
             self.dataMat = npm(dataMat)
         self.classLabel=[]  #聚类后的类别标签
 
-    def loadDate(self,data ,split_char='\t'):  #加载数据文件
+    def loadData(self,data ,split_char='\t'):  #加载数据文件
 
         if isinstance(data, str):
             fileName = data
@@ -133,17 +133,3 @@ class Kohonen(object):
         plt.show()
 
 SOM = Kohonen
-if __name__=="__main__":
-
-    max_itor = 100
-    t_list = np.zeros(max_itor)
-    for i in range(max_itor):
-        SOMNet = Kohonen()
-        dataSet = SOMNet.loadDate('../data/data.txt', split_char=' ')
-        s = time.clock()
-        C_res = SOMNet.train()
-        e = time.clock()
-        t_list[i] = e-s
-    print("{}次运行耗时：{}".format(max_itor,t_list))
-    print("平均耗时:{}".format(np.mean(t_list)))
-    SOMNet.showCluster(plt)

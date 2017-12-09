@@ -2,10 +2,10 @@
 # coding=utf-8
 
 from setuptools import setup, find_packages
-
+from .pysom import __version__
 setup(
     name="pySOM",
-    version='0.0.5',
+    version=__version__,
     description=(
         'Self-organizing Maps,SOM for python'
     ),
